@@ -13,6 +13,11 @@
   let canvas: HTMLCanvasElement;
   let engine: any = null;
   let supportedWebGPU = false;
+  // Engine option states
+  let glDesync = false; // WebGL desynchronized context attribute
+  let canvasDesync = false; // 2D canvas desync
+  let glPower: 'default' | 'high-performance' | 'low-power' = 'default';
+  let gpuPower: 'default' | 'high-performance' | 'low-power' = 'default';
 
   async function initEngine() {
     engine?.dispose?.();
@@ -23,11 +28,11 @@
         mode = "webgl";
         return initEngine();
       }
-      engine = await EngineGPU.create({ canvas });
+      engine = await EngineGPU.create({ canvas, powerPreference: gpuPower });
     } else if (mode === "webgl") {
-      engine = await EngineGL.create({ canvas });
+      engine = await EngineGL.create({ canvas, desynchronized: glDesync, powerPreference: glPower });
     } else {
-      engine = await EngineCanvas.create({ canvas });
+      engine = await EngineCanvas.create({ canvas, desynchronized: canvasDesync });
     }
     engine.start();
   }
@@ -43,6 +48,11 @@
     mode = nextMode(mode);
     canvasKey = `${mode}-${Date.now()}`; // force new canvas & engine recreation
   }
+
+  function toggleGLDesync() { glDesync = !glDesync; canvasKey = `${mode}-${Date.now()}`; }
+  function toggleCanvasDesync() { canvasDesync = !canvasDesync; canvasKey = `${mode}-${Date.now()}`; }
+  function cycleGLPower() { glPower = glPower === 'default' ? 'high-performance' : glPower === 'high-performance' ? 'low-power' : 'default'; canvasKey = `${mode}-${Date.now()}`; }
+  function cycleGPUPower() { gpuPower = gpuPower === 'default' ? 'high-performance' : gpuPower === 'high-performance' ? 'low-power' : 'default'; canvasKey = `${mode}-${Date.now()}`; }
 
   let canvasKey = `${mode}`;
 
@@ -65,6 +75,24 @@
       {#if mode === 'webgpu'}Switch to Canvas{/if}
       {#if mode === 'canvas'}Switch to WebGL{/if}
     </button>
+    {#if mode === 'webgl'}
+      <button on:click={toggleGLDesync}>
+        WebGL Desync: {glDesync ? 'On' : 'Off'}
+      </button>
+      <button on:click={cycleGLPower}>
+        WebGL Power: {glPower}
+      </button>
+    {/if}
+    {#if mode === 'webgpu'}
+      <button on:click={cycleGPUPower}>
+        WebGPU Power: {gpuPower}
+      </button>
+    {/if}
+    {#if mode === 'canvas'}
+      <button on:click={toggleCanvasDesync}>
+        Canvas Desync: {canvasDesync ? 'On' : 'Off'}
+      </button>
+    {/if}
     {#if mode === "webgpu" && !supportedWebGPU}
       <span class="warn">WebGPU not supported, fell back to WebGL.</span>
     {/if}

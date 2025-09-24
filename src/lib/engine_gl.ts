@@ -1,7 +1,7 @@
 // Minimal WebGL (2 if available else 1) engine replicating the draggable triangle API of the WebGPU Engine.
 // Public API mirrors Engine: EngineGL.create({canvas}), start(), stop(), dispose().
 
-export interface EngineGLOptions { canvas: HTMLCanvasElement }
+export interface EngineGLOptions { canvas: HTMLCanvasElement; desynchronized?: boolean; powerPreference?: WebGLContextAttributes['powerPreference'] | 'default' }
 
 export class EngineGL {
     private canvas: HTMLCanvasElement
@@ -20,12 +20,15 @@ export class EngineGL {
 
     static async create(opts: EngineGLOptions): Promise<EngineGL> {
         const e = new EngineGL(opts)
-        e.init()
+        e.init(opts)
         return e
     }
 
-    private init() {
-        const gl = (this.canvas.getContext('webgl2') || this.canvas.getContext('webgl')) as WebGLRenderingContext | WebGL2RenderingContext | null
+    private init(opts?: EngineGLOptions) {
+        const attribs: WebGLContextAttributes = {}
+        if (opts?.desynchronized) (attribs as any).desynchronized = true
+        if (opts?.powerPreference && opts.powerPreference !== 'default') (attribs as any).powerPreference = opts.powerPreference
+        const gl = (this.canvas.getContext('webgl2', attribs) || this.canvas.getContext('webgl', attribs)) as WebGLRenderingContext | WebGL2RenderingContext | null
         if (!gl) {
             console.error('WebGL not supported')
             return

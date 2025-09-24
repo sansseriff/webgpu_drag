@@ -1,7 +1,7 @@
 // Simple 2D Canvas engine matching the draggable triangle API of the WebGL/WebGPU engines.
 // Public API: EngineCanvas.create({canvas}), start(), stop(), dispose().
 
-export interface EngineCanvasOptions { canvas: HTMLCanvasElement }
+export interface EngineCanvasOptions { canvas: HTMLCanvasElement; desynchronized?: boolean }
 
 interface PointerState { dragging: boolean; lastX: number; lastY: number }
 
@@ -13,7 +13,8 @@ export class EngineCanvas {
   private translation = { x: 0, y: 0 } // in clip space units (same semantics as other engines)
   private pointer: PointerState = { dragging: false, lastX: 0, lastY: 0 }
 
-  private constructor(opts: EngineCanvasOptions) { this.canvas = opts.canvas }
+  private opts: EngineCanvasOptions
+  private constructor(opts: EngineCanvasOptions) { this.canvas = opts.canvas; this.opts = opts }
 
   static async create(opts: EngineCanvasOptions): Promise<EngineCanvas> {
     const e = new EngineCanvas(opts)
@@ -22,7 +23,7 @@ export class EngineCanvas {
   }
 
   private init() {
-    const ctx = this.canvas.getContext('2d')
+  const ctx = this.canvas.getContext('2d', this.opts.desynchronized ? { desynchronized: true } as any : undefined) as CanvasRenderingContext2D | null
     if (!ctx) { console.error('2D canvas not supported'); return }
     this.ctx = ctx
     this.setupEvents()

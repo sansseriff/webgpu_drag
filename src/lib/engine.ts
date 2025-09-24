@@ -34,6 +34,7 @@ const FallbackGPUBufferUsage = {
 export interface EngineOptions {
     canvas: HTMLCanvasElement;
     animate?: boolean; // default true
+    powerPreference?: 'default' | 'high-performance' | 'low-power';
 }
 
 interface PointerState {
@@ -44,6 +45,7 @@ interface PointerState {
 
 export class Engine {
     private canvas: HTMLCanvasElement;
+    private opts: EngineOptions;
     private device!: GPUDevice;
     private context!: GPUCanvasContext;
     private format!: any;
@@ -58,6 +60,7 @@ export class Engine {
 
     private constructor(opts: EngineOptions) {
         this.canvas = opts.canvas;
+        this.opts = opts;
     }
 
     static async create(opts: EngineOptions): Promise<Engine> {
@@ -72,7 +75,7 @@ export class Engine {
             return;
         }
 
-        const adapter = await (navigator as any).gpu.requestAdapter();
+    const adapter = await (navigator as any).gpu.requestAdapter({ powerPreference: this.opts.powerPreference && this.opts.powerPreference !== 'default' ? this.opts.powerPreference : undefined });
         if (!adapter) {
             console.error('Failed to get GPU adapter');
             return;
