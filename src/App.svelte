@@ -5,8 +5,9 @@
   import { onMount, onDestroy } from "svelte";
   import { Engine as EngineGPU } from "./lib/engine";
   import { EngineGL } from "./lib/engine_gl";
+  import { EngineCanvas } from "./lib/engine_canvas";
 
-  type Mode = "webgpu" | "webgl";
+  type Mode = "webgpu" | "webgl" | "canvas";
   let preferred: Mode = "webgpu";
   let mode: Mode = "webgpu";
   let canvas: HTMLCanvasElement;
@@ -18,21 +19,29 @@
     engine = null;
     if (mode === "webgpu") {
       if (!supportedWebGPU) {
+        // Fallback to next mode in cycle when WebGPU unsupported
         mode = "webgl";
         return initEngine();
       }
       engine = await EngineGPU.create({ canvas });
-      engine.start();
-    } else {
+    } else if (mode === "webgl") {
       engine = await EngineGL.create({ canvas });
-      engine.start();
+    } else {
+      engine = await EngineCanvas.create({ canvas });
     }
+    engine.start();
+  }
+
+  function nextMode(current: Mode): Mode {
+    // Cycle order requested: webgl -> webgpu -> canvas
+    if (current === "webgl") return "webgpu";
+    if (current === "webgpu") return "canvas";
+    return "webgl"; // canvas -> webgl
   }
 
   function toggle() {
-    mode = mode === "webgpu" ? "webgl" : "webgpu";
-    // force new canvas by changing key
-    canvasKey = `${mode}-${Date.now()}`;
+    mode = nextMode(mode);
+    canvasKey = `${mode}-${Date.now()}`; // force new canvas & engine recreation
   }
 
   let canvasKey = `${mode}`;
@@ -52,7 +61,9 @@
   <h1>Triangle + Drag ({mode.toUpperCase()})</h1>
   <div class="actions">
     <button on:click={toggle}>
-      Switch to {mode === "webgpu" ? "WebGL" : "WebGPU"}
+      {#if mode === 'webgl'}Switch to WebGPU{/if}
+      {#if mode === 'webgpu'}Switch to Canvas{/if}
+      {#if mode === 'canvas'}Switch to WebGL{/if}
     </button>
     {#if mode === "webgpu" && !supportedWebGPU}
       <span class="warn">WebGPU not supported, fell back to WebGL.</span>
